@@ -10,7 +10,7 @@ For more background information about word2vec and neural network training for t
 Note that this isn't a completely faithful rewrite, specifically:
 
 ### When building the vocabulary from the training file:
-1 .The original version does a reduction step when learning the vocabulary from the file when the vocab size hits 21 million words, removing any words that do not meet the minimum frequency threshold. This Java port has no such reduction step.
+1. The original version does a reduction step when learning the vocabulary from the file when the vocab size hits 21 million words, removing any words that do not meet the minimum frequency threshold. This Java port has no such reduction step.
 2. The original version injects a </s> token into the vocabulary (with a word count of 0) as a substitute for newlines in the input file. This Java port's vocabulary excludes the token.
 3. The original version does a quicksort which is not stable, so vocabulary terms with the same frequency may be ordered non-deterministically.  The Java port does an explicit sort first by frequency, then by the token's lexicographical ordering.
 
