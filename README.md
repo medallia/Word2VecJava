@@ -38,5 +38,13 @@ To verify that the project is building correctly, run
 
 It should run 7 tests without any error.
 
+Note: this project requires gradle 2.2+, if you are using older version of gradle, please upgrade it and run:
+```bash
+./gradlew clean test
+```
+
+to have a clean build and re-run the tests.
 
 
+## Contact
+Andrew Ko (wko@medallia.com)
