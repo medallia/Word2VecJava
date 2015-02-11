@@ -38,7 +38,10 @@ public class Word2VecExamples {
 	 * demo-word.sh example from the open source C implementation
 	 */
 	public static void demoWord() throws IOException, TException, InterruptedException, UnknownWordException {
-		List<String> read = Common.readToList(new File("text8"));
+		File f = new File("text8");
+		if (!f.exists())
+	       	       throw new IllegalStateException("Please download and unzip the text8 example from http://mattmahoney.net/dc/text8.zip");
+		List<String> read = Common.readToList(f);
 		List<List<String>> partitioned = Lists.transform(read, new Function<String, List<String>>() {
 			@Override
 			public List<String> apply(String input) {
