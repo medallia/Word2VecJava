@@ -161,6 +161,14 @@ public class Word2VecTest {
 				Lists.transform(matches, Match.TO_WORD)
 			);
 	}
+
+	/** Test reading Word2Vec C version txt output format into this library */
+	@Test
+	public void testTxtModelRead() throws IOException, UnknownWordException {
+		String filename = "word2vec.c.output.model.txt";
+		Word2VecModel word2VecModel = Word2VecModel.fromTextFile(filename, Common.readResource(Word2VecTest.class, filename));
+		assertEquals(0.9927725293757652, word2VecModel.forSearch().cosineDistance("three", "five"), 1e-5);
+	}
 	
 	/** @return {@link Word2VecTrainer} which by default uses all of the supported features */
 	@VisibleForTesting
