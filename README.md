@@ -18,7 +18,7 @@ Note that this isn't a completely faithful rewrite, specifically:
 1. The original version assumes that sentences are delimited by newline characters and injects a sentence boundary per 1000 non-filtered tokens, i.e. valid token by the vocabulary and not removed by the randomized sampling process. Java port mimics this behavior for now ...
 2. When the original version encounters an empty line in the input file, it re-processes the first word of the last non-empty line with a sentence length of 0 and updates the random value. Java port omits this behavior.
 
-### In the sampling function
+### In the sampling function:
 1. The original C documentation indicates that the range should be between 0 and 1e-5, but the default value is 1e-3. This Java port retains that confusing information.
 2. The random value generated for comparison to determine if a token should be filtered uses a float. This Java port uses double precision for twice the fun.
 
