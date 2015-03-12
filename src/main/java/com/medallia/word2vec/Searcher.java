@@ -17,6 +17,9 @@ public interface Searcher {
 	/** @return Top matches to the given word */
 	List<Match> getMatches(String word, int maxMatches) throws UnknownWordException;
 	
+	/** @return Top matches to the given vector */
+	List<Match> getMatches(final double[] vec, int maxNumMatches);
+	
 	/** Represents the similarity between two words */
 	public interface SemanticDifference {
 		/** @return Top matches to the given word which share this semantic relationship */
