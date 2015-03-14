@@ -1,5 +1,15 @@
 package com.medallia.word2vec;
 
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.ByteOrder;
+import java.util.List;
+
+import org.apache.commons.io.input.SwappedDataInputStream;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -7,10 +17,6 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.medallia.word2vec.thrift.Word2VecModelThrift;
 import com.medallia.word2vec.util.Common;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Represents the Word2Vec model, containing vectors for each word
@@ -57,8 +63,7 @@ public class Word2VecModel {
 		return new Word2VecModel(
 				thrift.getVocab(),
 				thrift.getLayerSize(),
-				Doubles.toArray(thrift.getVectors())
-			);
+				Doubles.toArray(thrift.getVectors()));
 	}
 
 	/**
