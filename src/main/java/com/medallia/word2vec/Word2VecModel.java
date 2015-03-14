@@ -71,6 +71,68 @@ public class Word2VecModel {
 	}
 
 	/**
+   * Assume word2vec bin file uses little-endian representation, while java
+   * uses big endian.
+   */
+  public static Word2VecModel fromBinFile(File file)
+      throws IOException {
+    return fromBinFile(file, ByteOrder.LITTLE_ENDIAN);
+  }
+
+  public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
+      throws IOException {
+
+    FileInputStream fis = new FileInputStream(file);
+    DataInput in = null;
+    if (byteOrder == ByteOrder.BIG_ENDIAN) {
+      in = new DataInputStream(fis);
+    } else {
+      in = new SwappedDataInputStream(fis);
+    }
+
+    StringBuilder sb = new StringBuilder();
+    char c = (char) in.readByte();
+    while (c != '\n') {
+      sb.append(c);
+      c = (char) in.readByte();
+    }
+    String firstLine = sb.toString();
+    int index = firstLine.indexOf(' ');
+    int vocabSize = Integer.parseInt(firstLine.substring(0, index));
+    int layerSize = Integer.parseInt(firstLine.substring(index + 1));
+
+    List<String> vocabs = Lists.newArrayList();
+    List<Double> vectors = Lists.newArrayList();
+
+    for (int lineno = 0; lineno < vocabSize; lineno++) {
+      sb = new StringBuilder();
+      c = (char) in.readByte();
+      while (c != ' ') {
+        // ignore newlines in front of words (some binary files have newline,
+        // some don't)
+        if (c != '\n') {
+          sb.append(c);
+        }
+        c = (char) in.readByte();
+      }
+      String vocab = sb.toString();
+      vocabs.add(vocab);
+
+      for (int i = 0; i < layerSize; i++) {
+        float f = in.readFloat();
+        vectors.add((double) f);
+      }
+    }
+    fis.close();
+    
+    Word2VecModelThrift thrift = new Word2VecModelThrift()
+        .setLayerSize(layerSize)
+        .setVocab(vocabs)
+        .setVectors(vectors);
+    return fromThrift(thrift);
+  }
+
+  /**
 	 * @return {@link Word2VecModel} from the lines of the file in the text output format of the
 	 * Word2Vec C open source project.
 	 */
