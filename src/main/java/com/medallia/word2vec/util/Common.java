@@ -14,6 +14,7 @@ import java.io.ObjectOutputStream;
 import java.io.Reader;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -106,6 +107,15 @@ public class Common {
 		}
 		return unpackStream(stream, fn);
 	}
+	
+	/** Get a file to read the raw contents of the given resource :) */
+  public static File getResourceAsFile(Class<?> clazz, String fn) throws IOException {
+    URL url = clazz.getResource(fn);
+    if (url == null || url.getFile() == null) {
+      throw new IOException("resource \"" + fn + "\" relative to " + clazz + " not found.");
+    }
+    return new File(url.getFile());
+  }
 
 	/**
 	 * @throws IOException if {@code is} is null or if an {@link IOException} is thrown when reading from {@code is}

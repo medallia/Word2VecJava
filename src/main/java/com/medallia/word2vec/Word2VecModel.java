@@ -76,65 +76,66 @@ public class Word2VecModel {
 	}
 
 	/**
-   * Assume word2vec bin file uses little-endian representation, while java
-   * uses big endian.
+   * Forwards to {@link #fromBinFile(File, ByteOrder)} with the default 
+   * ByteOrder.LITTLE_ENDIAN
    */
   public static Word2VecModel fromBinFile(File file)
       throws IOException {
     return fromBinFile(file, ByteOrder.LITTLE_ENDIAN);
   }
 
+  /**
+   * @return {@link Word2VecModel} created from the binary representation output
+   * by the open source C version of word2vec using the given byte order.
+   */
   public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
       throws IOException {
 
-    FileInputStream fis = new FileInputStream(file);
-    DataInput in = null;
-    if (byteOrder == ByteOrder.BIG_ENDIAN) {
-      in = new DataInputStream(fis);
-    } else {
-      in = new SwappedDataInputStream(fis);
-    }
+    try (FileInputStream fis = new FileInputStream(file);) {
+      DataInput in = (byteOrder == ByteOrder.BIG_ENDIAN) ?
+          new DataInputStream(fis) : new SwappedDataInputStream(fis);
 
-    StringBuilder sb = new StringBuilder();
-    char c = (char) in.readByte();
-    while (c != '\n') {
-      sb.append(c);
-      c = (char) in.readByte();
-    }
-    String firstLine = sb.toString();
-    int index = firstLine.indexOf(' ');
-    int vocabSize = Integer.parseInt(firstLine.substring(0, index));
-    int layerSize = Integer.parseInt(firstLine.substring(index + 1));
-
-    List<String> vocabs = Lists.newArrayList();
-    List<Double> vectors = Lists.newArrayList();
-
-    for (int lineno = 0; lineno < vocabSize; lineno++) {
-      sb = new StringBuilder();
-      c = (char) in.readByte();
-      while (c != ' ') {
-        // ignore newlines in front of words (some binary files have newline,
-        // some don't)
-        if (c != '\n') {
-          sb.append(c);
-        }
+      StringBuilder sb = new StringBuilder();
+      char c = (char) in.readByte();
+      while (c != '\n') {
+        sb.append(c);
         c = (char) in.readByte();
       }
-      String vocab = sb.toString();
-      vocabs.add(vocab);
+      String firstLine = sb.toString();
+      int index = firstLine.indexOf(' ');
+      Preconditions.checkState(index != -1,
+          "Expected a space in the first line of file '%s': '%s'",
+          file.getAbsolutePath(), firstLine);
 
-      for (int i = 0; i < layerSize; i++) {
-        float f = in.readFloat();
-        vectors.add((double) f);
+      int vocabSize = Integer.parseInt(firstLine.substring(0, index));
+      int layerSize = Integer.parseInt(firstLine.substring(index + 1));
+
+      List<String> vocabs = Lists.newArrayList();
+      List<Double> vectors = Lists.newArrayList();
+
+      for (int lineno = 0; lineno < vocabSize; lineno++) {
+        sb = new StringBuilder();
+        c = (char) in.readByte();
+        while (c != ' ') {
+          // ignore newlines in front of words (some binary files have newline,
+          // some don't)
+          if (c != '\n') {
+            sb.append(c);
+          }
+          c = (char) in.readByte();
+        }
+        vocabs.add(sb.toString());
+
+        for (int i = 0; i < layerSize; i++) {
+          vectors.add((double) in.readFloat());
+        }
       }
+      Word2VecModelThrift thrift = new Word2VecModelThrift()
+          .setLayerSize(layerSize)
+          .setVocab(vocabs)
+          .setVectors(vectors);
+      return fromThrift(thrift);
     }
-    fis.close();
-    
-    Word2VecModelThrift thrift = new Word2VecModelThrift()
-        .setLayerSize(layerSize)
-        .setVocab(vocabs)
-        .setVectors(vectors);
-    return fromThrift(thrift);
   }
 
   /**

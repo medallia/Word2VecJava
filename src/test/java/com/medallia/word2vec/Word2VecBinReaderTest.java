@@ -5,25 +5,39 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.List;
 
 import org.junit.Test;
 
 import com.medallia.word2vec.Searcher.UnknownWordException;
+import com.medallia.word2vec.util.Common;
 
+/**
+ * Tests converting the binary models into
+ * {@link com.medallia.word2vec.Word2VecModel}s.
+ * 
+ * @see com.medallia.word2vec.Word2VecModel#fromBinFile(File)
+ * @see com.medallia.word2vec.Word2VecModel#fromBinFile(File,
+ *      java.nio.ByteOrder)
+ */
 public class Word2VecBinReaderTest {
 
+  /**
+   * Tests that the Word2VecModels created from a binary and text
+   * representations are equivalent
+   */
   @Test
   public void test()
       throws IOException, UnknownWordException {
-    URL url = this.getClass().getResource("/com/medallia/word2vec/tokensModel.bin");
-    File binFile = new File(url.getFile());
+    File binFile = Common.getResourceAsFile(
+        this.getClass(),
+        "/com/medallia/word2vec/tokensModel.bin");
     Word2VecModel binModel = Word2VecModel.fromBinFile(binFile);
     Searcher binSearcher = binModel.forSearch();
 
-    url = this.getClass().getResource("/com/medallia/word2vec/tokensModel.txt");
-    File txtFile = new File(url.getFile());
+    File txtFile = Common.getResourceAsFile(
+        this.getClass(),
+        "/com/medallia/word2vec/tokensModel.txt");
     Word2VecModel txtModel = Word2VecModel.fromTextFile(txtFile);
     Searcher txtSearcher = txtModel.forSearch();
 
@@ -38,12 +52,12 @@ public class Word2VecBinReaderTest {
     for (String vocab : txtModel.getVocab()) {
       List<Double> txtVector = txtSearcher.getRawVector(vocab);
       List<Double> binVector = binSearcher.getRawVector(vocab);
-      testVector(txtVector, binVector, vocab);
+      assertVectorsEqual(txtVector, binVector);
     }
   }
 
-  private void testVector(List<Double> txtVector, List<Double> binVector,
-      String vocab) {
+  private void assertVectorsEqual(List<Double> txtVector,
+      List<Double> binVector) {
     assertEquals(txtVector.size(), binVector.size());
     for (int i = 0; i < txtVector.size(); i++) {
       double txtD = txtVector.get(i);
