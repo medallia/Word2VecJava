@@ -54,10 +54,10 @@ public class Word2VecExamples {
 				.useNumThreads(20)
 				.setWindowSize(8)
 				.type(NeuralNetworkType.CBOW)
-				.setLayerSize(5)
+				.setLayerSize(200)
 				.useNegativeSamples(25)
 				.setDownSamplingRate(1e-4)
-				.setNumIterations(1)
+				.setNumIterations(5)
 				.setListener(new TrainingProgressListener() {
 					@Override public void update(Stage stage, double progress) {
 						System.out.println(String.format("%s is %.2f%% complete", Format.formatEnum(stage), progress * 100));
