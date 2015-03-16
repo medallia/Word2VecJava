@@ -130,11 +130,11 @@ public class Word2VecModel {
           vectors.add((double) in.readFloat());
         }
       }
-      Word2VecModelThrift thrift = new Word2VecModelThrift()
+
+      return fromThrift(new Word2VecModelThrift()
           .setLayerSize(layerSize)
           .setVocab(vocabs)
-          .setVectors(vectors);
-      return fromThrift(thrift);
+          .setVectors(vectors));
     }
   }
 
