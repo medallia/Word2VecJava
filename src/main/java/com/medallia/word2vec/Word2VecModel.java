@@ -1,5 +1,15 @@
 package com.medallia.word2vec;
 
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.ByteOrder;
+import java.util.List;
+
+import org.apache.commons.io.input.SwappedDataInputStream;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -7,10 +17,6 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.medallia.word2vec.thrift.Word2VecModelThrift;
 import com.medallia.word2vec.util.Common;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Represents the Word2Vec model, containing vectors for each word
@@ -57,8 +63,7 @@ public class Word2VecModel {
 		return new Word2VecModel(
 				thrift.getVocab(),
 				thrift.getLayerSize(),
-				Doubles.toArray(thrift.getVectors())
-			);
+				Doubles.toArray(thrift.getVectors()));
 	}
 
 	/**
@@ -71,6 +76,69 @@ public class Word2VecModel {
 	}
 
 	/**
+   * Forwards to {@link #fromBinFile(File, ByteOrder)} with the default 
+   * ByteOrder.LITTLE_ENDIAN
+   */
+  public static Word2VecModel fromBinFile(File file)
+      throws IOException {
+    return fromBinFile(file, ByteOrder.LITTLE_ENDIAN);
+  }
+
+  /**
+   * @return {@link Word2VecModel} created from the binary representation output
+   * by the open source C version of word2vec using the given byte order.
+   */
+  public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
+      throws IOException {
+
+    try (FileInputStream fis = new FileInputStream(file);) {
+      DataInput in = (byteOrder == ByteOrder.BIG_ENDIAN) ?
+          new DataInputStream(fis) : new SwappedDataInputStream(fis);
+
+      StringBuilder sb = new StringBuilder();
+      char c = (char) in.readByte();
+      while (c != '\n') {
+        sb.append(c);
+        c = (char) in.readByte();
+      }
+      String firstLine = sb.toString();
+      int index = firstLine.indexOf(' ');
+      Preconditions.checkState(index != -1,
+          "Expected a space in the first line of file '%s': '%s'",
+          file.getAbsolutePath(), firstLine);
+
+      int vocabSize = Integer.parseInt(firstLine.substring(0, index));
+      int layerSize = Integer.parseInt(firstLine.substring(index + 1));
+
+      List<String> vocabs = Lists.newArrayList();
+      List<Double> vectors = Lists.newArrayList();
+
+      for (int lineno = 0; lineno < vocabSize; lineno++) {
+        sb = new StringBuilder();
+        c = (char) in.readByte();
+        while (c != ' ') {
+          // ignore newlines in front of words (some binary files have newline,
+          // some don't)
+          if (c != '\n') {
+            sb.append(c);
+          }
+          c = (char) in.readByte();
+        }
+        vocabs.add(sb.toString());
+
+        for (int i = 0; i < layerSize; i++) {
+          vectors.add((double) in.readFloat());
+        }
+      }
+
+      return fromThrift(new Word2VecModelThrift()
+          .setLayerSize(layerSize)
+          .setVocab(vocabs)
+          .setVectors(vectors));
+    }
+  }
+
+  /**
 	 * @return {@link Word2VecModel} from the lines of the file in the text output format of the
 	 * Word2Vec C open source project.
 	 */
