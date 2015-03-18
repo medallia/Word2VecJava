@@ -4,6 +4,13 @@
   <groupId>com.medallia.word2vec</groupId>
   <artifactId>medallia-word2vec</artifactId>
   <version>1.0.0</version>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>http://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -75,6 +82,11 @@
     	<groupId>org.apache.thrift</groupId>
     	<artifactId>libfb303</artifactId>
     	<version>0.9.1</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.apache.commons</groupId>
+    	<artifactId>commons-math3</artifactId>
+    	<version>3.4.1</version>
     </dependency>
   </dependencies>
 </project>
