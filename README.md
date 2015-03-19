@@ -1,5 +1,7 @@
 # Word2vecJava
 
+[![Build Status](https://travis-ci.org/medallia/Word2VecJava.svg?branch=master)](https://travis-ci.org/medallia/Word2VecJava)
+
 This is a port of the open source C implementation of word2vec (https://code.google.com/p/word2vec/)
 
 For more background information about word2vec and neural network training for the vector representation of words, please see the following papers.
