@@ -1,6 +1,4 @@
 apply plugin: 'java'
-apply plugin: 'maven'
-apply plugin: 'signing'
 
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
@@ -21,78 +19,3 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 }
 
-task javadocJar(type: Jar) {
-    classifier = 'javadoc'
-    from javadoc
-}
-
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-artifacts {
-    archives javadocJar, sourcesJar
-}
-
-signing {
-    sign configurations.archives
-}
-
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: "yibin", password: "*****")
-      }
-
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: "yibin", password: "*****")
-      }
-
-      pom.project {
-        name 'Word2VecJava'
-        packaging 'jar'
-        description 'Word2Vec Java Port'
-        url 'https://github.com/medallia/Word2VecJava'
-
-        scm {
-          connection 'scm:git:git@github.com:medallia/Word2VecJava.git'
-          developerConnection 'scm:git:git@github.com:medallia/Word2VecJava.git'
-          url 'https://github.com/medallia/Word2VecJava.git'
-        }
-
-        licenses {
-          license {
-            name 'The MIT License'
-            url 'http://opensource.org/licenses/MIT'
-          }
-        }
-
-        developers {
-          developer {
-            id 'wko'
-            name 'Andrew Ko'
-            email 'wko@medallia.com'
-          }
-	  developer {
-	    id 'yibinlin'
-	    name 'Yibin Lin'
-	    email 'yibin@medallia.com'
-	  }
-	  developer {
-	    id 'yfpeng'
-	    name 'Yifan Peng'
-	    email 'yfpeng@udel.edu'
-	  }
-	  developer {
-	    id 'guerda'
-	    name 'Philip Gillißen'
-	  }
-        }
-      }
-    }
-  }
-}
