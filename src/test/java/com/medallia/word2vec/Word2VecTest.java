@@ -173,6 +173,7 @@ public class Word2VecTest {
             .type(NeuralNetworkType.SKIP_GRAM)
             .train(testData());
 
+        // This vector defines the word "anarchism" in the given model.
         double[] vectors = new double[] { 0.11410251703652753, 0.271180824514185, 0.03748515103121994, 0.20888126888511183, 0.009713531343874777, 0.4769425625416319, 0.1431890482445165, -0.1917578875330224, -0.33532561802423366,
             -0.08794543238607992, 0.20404593606213406, 0.26170074241479385, 0.10020961212561065, 0.11400571893146201, -0.07846426915175395, -0.19404092647187385, 0.13381991303455204, -4.6749635342694615E-4, -0.0820905789076496,
             -0.30157145455251866, 0.3652037905836543, -0.16466827556950117, -0.012965932276668056, 0.09896568721267748, -0.01925755122093615 };
@@ -181,6 +182,27 @@ public class Word2VecTest {
 
         assertEquals(
                 ImmutableList.of("anarchism", "feminism", "trouble", "left", "capitalism"),
+                Lists.transform(matches, Match.TO_WORD)
+            );
+    }
+  
+  /**
+   * Test that the model can retrieve words by a vector.
+   */
+  @Test
+    public void testGetWordByNotExistantVector() throws InterruptedException, IOException, UnknownWordException {
+        Word2VecModel model = trainer()
+            .type(NeuralNetworkType.SKIP_GRAM)
+            .train(testData());
+
+        double[] vectors = new double[] { 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0 };
+
+        List<Match> matches = model.forSearch().getMatches(vectors, 5);
+
+        assertEquals(
+                ImmutableList.of("the", "of", "and", "in", "a"),
                 Lists.transform(matches, Match.TO_WORD)
             );
     }
