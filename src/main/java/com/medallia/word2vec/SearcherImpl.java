@@ -49,7 +49,7 @@ class SearcherImpl implements Searcher {
 		return normalized.containsKey(word);
 	}
 
-	private List<Match> getMatches(final double[] vec, int maxNumMatches) {
+	@Override public List<Match> getMatches(final double[] vec, int maxNumMatches) {
 		return Match.ORDERING.greatestOf(
 				Iterables.transform(model.vocab, new Function<String, Match>() {
 					@Override
