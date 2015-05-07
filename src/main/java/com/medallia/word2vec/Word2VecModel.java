@@ -123,16 +123,16 @@ public class Word2VecModel {
       String firstLine = sb.toString();
       int index = firstLine.indexOf(' ');
       Preconditions.checkState(index != -1,
-					"Expected a space in the first line of file '%s': '%s'",
-					file.getAbsolutePath(), firstLine);
+          "Expected a space in the first line of file '%s': '%s'",
+          file.getAbsolutePath(), firstLine);
 
 			final int vocabSize = Integer.parseInt(firstLine.substring(0, index));
       final int layerSize = Integer.parseInt(firstLine.substring(index + 1));
 			logger.info(
 					String.format("Loading %d vectors with dimensionality %d", vocabSize, layerSize));
 
-			List<String> vocabs = new ArrayList<String>(vocabSize);
-			double vectors[] = new double[vocabSize * layerSize];
+      List<String> vocabs = new ArrayList<String>(vocabSize);
+      double vectors[] = new double[vocabSize * layerSize];
 
 			long lastLogMessage = System.currentTimeMillis();
 			final float[] floats = new float[layerSize];
