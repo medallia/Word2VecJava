@@ -27,13 +27,13 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Represents the Word2Vec model, containing vectors for each word
- * <p>
+ * <p/>
  * Instances of this class are obtained via:
  * <ul>
  * <li> {@link #trainer()}
  * <li> {@link #fromThrift(Word2VecModelThrift)}
  * </ul>
- * 
+ *
  * @see {@link #forSearch()}
  */
 public class Word2VecModel {
@@ -42,13 +42,13 @@ public class Word2VecModel {
 	final List<String> vocab;
 	final int layerSize;
 	final double[] vectors;
-	
+
 	Word2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
 		this.vocab = ImmutableList.copyOf(vocab);
 		this.layerSize = layerSize;
 		this.vectors = vectors;
 	}
-	
+
 	/** @return Vocabulary */
 	public Iterable<String> getVocab() {
 		return vocab;
@@ -58,15 +58,15 @@ public class Word2VecModel {
 	public Searcher forSearch() {
 		return new SearcherImpl(this);
 	}
-	
+
 	/** @return Serializable thrift representation */
 	public Word2VecModelThrift toThrift() {
 		return new Word2VecModelThrift()
-			.setVocab(vocab)
-			.setLayerSize(layerSize)
-			.setVectors(Doubles.asList(vectors));
+				.setVocab(vocab)
+				.setLayerSize(layerSize)
+				.setVectors(Doubles.asList(vectors));
 	}
-	
+
 	/** @return {@link Word2VecModel} created from a thrift representation */
 	public static Word2VecModel fromThrift(Word2VecModelThrift thrift) {
 		return new Word2VecModel(
@@ -85,22 +85,22 @@ public class Word2VecModel {
 	}
 
 	/**
-   * Forwards to {@link #fromBinFile(File, ByteOrder)} with the default 
-   * ByteOrder.LITTLE_ENDIAN
-   */
-  public static Word2VecModel fromBinFile(File file)
-      throws IOException {
-    return fromBinFile(file, ByteOrder.LITTLE_ENDIAN);
-  }
+	 * Forwards to {@link #fromBinFile(File, ByteOrder)} with the default
+	 * ByteOrder.LITTLE_ENDIAN
+	 */
+	public static Word2VecModel fromBinFile(File file)
+			throws IOException {
+		return fromBinFile(file, ByteOrder.LITTLE_ENDIAN);
+	}
 
-  /**
-   * @return {@link Word2VecModel} created from the binary representation output
-   * by the open source C version of word2vec using the given byte order.
-   */
-  public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
-      throws IOException {
+	/**
+	 * @return {@link Word2VecModel} created from the binary representation output
+	 * by the open source C version of word2vec using the given byte order.
+	 */
+	public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
+			throws IOException {
 
-    try (FileInputStream fis = new FileInputStream(file);) {
+		try (FileInputStream fis = new FileInputStream(file);) {
 			final FileChannel channel = fis.getChannel();
 			final long oneGB = 1024 * 1024 * 1024;
 			MappedByteBuffer buffer =
@@ -110,66 +110,66 @@ public class Word2VecModel {
 							Math.min(channel.size(), Integer.MAX_VALUE));
 			buffer.order(byteOrder);
 			int bufferCount = 1;
-				// Java's NIO only allows memory-mapping up to 2GB. To work around this problem, we re-map
-			  // every gigabyte. To calculate offsets correctly, we have to keep track how many gigabytes
-			  // we've already skipped. That's what this is for.
+			// Java's NIO only allows memory-mapping up to 2GB. To work around this problem, we re-map
+			// every gigabyte. To calculate offsets correctly, we have to keep track how many gigabytes
+			// we've already skipped. That's what this is for.
 
-      StringBuilder sb = new StringBuilder();
-      char c = (char)buffer.get();
-      while (c != '\n') {
-        sb.append(c);
-        c = (char)buffer.get();
-      }
-      String firstLine = sb.toString();
-      int index = firstLine.indexOf(' ');
-      Preconditions.checkState(index != -1,
-          "Expected a space in the first line of file '%s': '%s'",
-          file.getAbsolutePath(), firstLine);
+			StringBuilder sb = new StringBuilder();
+			char c = (char) buffer.get();
+			while (c != '\n') {
+				sb.append(c);
+				c = (char) buffer.get();
+			}
+			String firstLine = sb.toString();
+			int index = firstLine.indexOf(' ');
+			Preconditions.checkState(index != -1,
+					"Expected a space in the first line of file '%s': '%s'",
+					file.getAbsolutePath(), firstLine);
 
 			final int vocabSize = Integer.parseInt(firstLine.substring(0, index));
-      final int layerSize = Integer.parseInt(firstLine.substring(index + 1));
+			final int layerSize = Integer.parseInt(firstLine.substring(index + 1));
 			logger.info(
 					String.format("Loading %d vectors with dimensionality %d", vocabSize, layerSize));
 
-      List<String> vocabs = new ArrayList<String>(vocabSize);
-      double vectors[] = new double[vocabSize * layerSize];
+			List<String> vocabs = new ArrayList<String>(vocabSize);
+			double vectors[] = new double[vocabSize * layerSize];
 
 			long lastLogMessage = System.currentTimeMillis();
 			final float[] floats = new float[layerSize];
-      for (int lineno = 0; lineno < vocabSize; lineno++) {
+			for (int lineno = 0; lineno < vocabSize; lineno++) {
 				// read vocab
 				sb.setLength(0);
-        c = (char)buffer.get();
-        while (c != ' ') {
-          // ignore newlines in front of words (some binary files have newline,
-          // some don't)
-          if (c != '\n') {
-            sb.append(c);
-          }
-          c = (char)buffer.get();
-        }
-        vocabs.add(sb.toString());
+				c = (char) buffer.get();
+				while (c != ' ') {
+					// ignore newlines in front of words (some binary files have newline,
+					// some don't)
+					if (c != '\n') {
+						sb.append(c);
+					}
+					c = (char) buffer.get();
+				}
+				vocabs.add(sb.toString());
 
 				// read vector
 				final FloatBuffer floatBuffer = buffer.asFloatBuffer();
 				floatBuffer.get(floats);
-				for(int i = 0; i < floats.length; ++i) {
+				for (int i = 0; i < floats.length; ++i) {
 					vectors[lineno * layerSize + i] = floats[i];
 				}
 				buffer.position(buffer.position() + 4 * layerSize);
 
 				// print log
 				final long now = System.currentTimeMillis();
-				if(now - lastLogMessage > 1000) {
-					final double percentage = ((double)(lineno + 1) / (double)vocabSize) * 100.0;
+				if (now - lastLogMessage > 1000) {
+					final double percentage = ((double) (lineno + 1) / (double) vocabSize) * 100.0;
 					logger.info(
 							String.format("Loaded %d/%d vectors (%f%%)", lineno + 1, vocabSize, percentage));
 					lastLogMessage = now;
 				}
 
 				// remap file
-				if(buffer.position() > oneGB) {
-					final int newPosition = (int)(buffer.position() - oneGB);
+				if (buffer.position() > oneGB) {
+					final int newPosition = (int) (buffer.position() - oneGB);
 					final long size = Math.min(channel.size() - oneGB * bufferCount, Integer.MAX_VALUE);
 					logger.debug(
 							String.format(
@@ -185,13 +185,13 @@ public class Word2VecModel {
 					buffer.position(newPosition);
 					bufferCount += 1;
 				}
-      }
+			}
 
-			return new Word2VecModel(vocabs, layerSize,	vectors);
-    }
-  }
+			return new Word2VecModel(vocabs, layerSize, vectors);
+		}
+	}
 
-  /**
+	/**
 	 * @return {@link Word2VecModel} from the lines of the file in the text output format of the
 	 * Word2Vec C open source project.
 	 */
@@ -208,7 +208,7 @@ public class Word2VecModel {
 				filename,
 				vocabSize,
 				lines.size() - 1
-			);
+		);
 
 		for (int n = 1; n < lines.size(); n++) {
 			String[] values = lines.get(n).split(" ");
@@ -222,7 +222,7 @@ public class Word2VecModel {
 					n,
 					layerSize,
 					values.length - 1
-				);
+			);
 
 			for (int d = 1; d < values.length; d++) {
 				vectors.add(Double.parseDouble(values[d]));
@@ -235,7 +235,7 @@ public class Word2VecModel {
 				.setVectors(vectors);
 		return fromThrift(thrift);
 	}
-	
+
 	/** @return {@link Word2VecTrainerBuilder} for training a model */
 	public static Word2VecTrainerBuilder trainer() {
 		return new Word2VecTrainerBuilder();
