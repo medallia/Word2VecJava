@@ -1,7 +1,5 @@
 package com.medallia.word2vec;
 
-import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -9,11 +7,8 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.commons.io.input.SwappedDataInputStream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -22,8 +17,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.medallia.word2vec.thrift.Word2VecModelThrift;
 import com.medallia.word2vec.util.Common;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 
 /**
  * Represents the Word2Vec model, containing vectors for each word
@@ -37,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * @see {@link #forSearch()}
  */
 public class Word2VecModel {
-	static Logger logger = LoggerFactory.getLogger(Word2VecModel.class);
+	static Logger logger = Logger.getLogger(Word2VecModel.class);
 
 	final List<String> vocab;
 	final int layerSize;
