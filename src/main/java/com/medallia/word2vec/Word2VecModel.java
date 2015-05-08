@@ -36,6 +36,7 @@ public class Word2VecModel {
 	final List<String> vocab;
 	final int layerSize;
 	final double[] vectors;
+	private final static long ONE_GB = 1024 * 1024 * 1024;
 
 	Word2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
 		this.vocab = ImmutableList.copyOf(vocab);
@@ -96,7 +97,6 @@ public class Word2VecModel {
 
 		try (FileInputStream fis = new FileInputStream(file)) {
 			final FileChannel channel = fis.getChannel();
-			final long oneGB = 1024 * 1024 * 1024;
 			MappedByteBuffer buffer =
 					channel.map(
 							FileChannel.MapMode.READ_ONLY,
@@ -162,18 +162,18 @@ public class Word2VecModel {
 				}
 
 				// remap file
-				if (buffer.position() > oneGB) {
-					final int newPosition = (int) (buffer.position() - oneGB);
-					final long size = Math.min(channel.size() - oneGB * bufferCount, Integer.MAX_VALUE);
+				if (buffer.position() > ONE_GB) {
+					final int newPosition = (int) (buffer.position() - ONE_GB);
+					final long size = Math.min(channel.size() - ONE_GB * bufferCount, Integer.MAX_VALUE);
 					logger.debug(
 							String.format(
 									"Remapping for GB number %d. Start: %d, size: %d",
 									bufferCount,
-									oneGB * bufferCount,
+									ONE_GB * bufferCount,
 									size));
 					buffer = channel.map(
 							FileChannel.MapMode.READ_ONLY,
-							oneGB * bufferCount,
+							ONE_GB * bufferCount,
 							size);
 					buffer.order(byteOrder);
 					buffer.position(newPosition);
