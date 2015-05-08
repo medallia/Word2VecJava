@@ -94,7 +94,7 @@ public class Word2VecModel {
 	public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
 			throws IOException {
 
-		try (FileInputStream fis = new FileInputStream(file);) {
+		try (FileInputStream fis = new FileInputStream(file)) {
 			final FileChannel channel = fis.getChannel();
 			final long oneGB = 1024 * 1024 * 1024;
 			MappedByteBuffer buffer =
