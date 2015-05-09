@@ -17,7 +17,9 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.medallia.word2vec.thrift.Word2VecModelThrift;
 import com.medallia.word2vec.util.Common;
-import org.apache.log4j.Logger;
+import com.medallia.word2vec.util.ProfilingTimer;
+import com.medallia.word2vec.util.AC;
+
 
 /**
  * Represents the Word2Vec model, containing vectors for each word
@@ -31,8 +33,6 @@ import org.apache.log4j.Logger;
  * @see {@link #forSearch()}
  */
 public class Word2VecModel {
-	static Logger logger = Logger.getLogger(Word2VecModel.class);
-
 	final List<String> vocab;
 	final int layerSize;
 	final double[] vectors;
@@ -80,23 +80,35 @@ public class Word2VecModel {
 	}
 
 	/**
-	 * Forwards to {@link #fromBinFile(File, ByteOrder)} with the default
-	 * ByteOrder.LITTLE_ENDIAN
+	 * Forwards to {@link #fromBinFile(File, ByteOrder, ProfilingTimer)} with the default
+	 * ByteOrder.LITTLE_ENDIAN and no ProfilingTimer
 	 */
 	public static Word2VecModel fromBinFile(File file)
 			throws IOException {
-		return fromBinFile(file, ByteOrder.LITTLE_ENDIAN);
+		return fromBinFile(file, ByteOrder.LITTLE_ENDIAN, ProfilingTimer.NONE);
+	}
+
+	/**
+	 * Forwards to {@link #fromBinFile(File, ByteOrder, ProfilingTimer)} with no ProfilingTimer
+	 */
+	public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
+			throws IOException {
+		return fromBinFile(file, byteOrder, ProfilingTimer.NONE);
 	}
 
 	/**
 	 * @return {@link Word2VecModel} created from the binary representation output
 	 * by the open source C version of word2vec using the given byte order.
 	 */
-	public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder)
+	public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder, ProfilingTimer timer)
 			throws IOException {
 
-		try (FileInputStream fis = new FileInputStream(file)) {
+		try (
+				final FileInputStream fis = new FileInputStream(file);
+				final AC ac = timer.start("Loading vectors from bin file")
+		) {
 			final FileChannel channel = fis.getChannel();
+			timer.start("Reading gigabyte #1");
 			MappedByteBuffer buffer =
 					channel.map(
 							FileChannel.MapMode.READ_ONLY,
@@ -122,8 +134,10 @@ public class Word2VecModel {
 
 			final int vocabSize = Integer.parseInt(firstLine.substring(0, index));
 			final int layerSize = Integer.parseInt(firstLine.substring(index + 1));
-			logger.info(
-					String.format("Loading %d vectors with dimensionality %d", vocabSize, layerSize));
+			timer.appendToLog(String.format(
+					"Loading %d vectors with dimensionality %d",
+					vocabSize,
+					layerSize));
 
 			List<String> vocabs = new ArrayList<String>(vocabSize);
 			double vectors[] = new double[vocabSize * layerSize];
@@ -156,7 +170,7 @@ public class Word2VecModel {
 				final long now = System.currentTimeMillis();
 				if (now - lastLogMessage > 1000) {
 					final double percentage = ((double) (lineno + 1) / (double) vocabSize) * 100.0;
-					logger.info(
+					timer.appendToLog(
 							String.format("Loaded %d/%d vectors (%f%%)", lineno + 1, vocabSize, percentage));
 					lastLogMessage = now;
 				}
@@ -165,12 +179,11 @@ public class Word2VecModel {
 				if (buffer.position() > ONE_GB) {
 					final int newPosition = (int) (buffer.position() - ONE_GB);
 					final long size = Math.min(channel.size() - ONE_GB * bufferCount, Integer.MAX_VALUE);
-					logger.debug(
-							String.format(
-									"Remapping for GB number %d. Start: %d, size: %d",
-									bufferCount,
-									ONE_GB * bufferCount,
-									size));
+					timer.endAndStart(
+							"Reading gigabyte #%d. Start: %d, size: %d",
+							bufferCount,
+							ONE_GB * bufferCount,
+							size);
 					buffer = channel.map(
 							FileChannel.MapMode.READ_ONLY,
 							ONE_GB * bufferCount,
@@ -180,6 +193,7 @@ public class Word2VecModel {
 					bufferCount += 1;
 				}
 			}
+			timer.end();
 
 			return new Word2VecModel(vocabs, layerSize, vectors);
 		}
