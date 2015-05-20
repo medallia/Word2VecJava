@@ -37,11 +37,17 @@ public class Word2VecModel {
 	final int layerSize;
 	final double[] vectors;
 	private final static long ONE_GB = 1024 * 1024 * 1024;
+	boolean normalized;
 
 	Word2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
+		this(vocab, layerSize, vectors, false);
+	}
+
+	Word2VecModel(Iterable<String> vocab, int layerSize, double[] vectors, boolean normalized) {
 		this.vocab = ImmutableList.copyOf(vocab);
 		this.layerSize = layerSize;
 		this.vectors = vectors;
+		this.normalized = normalized;
 	}
 
 	/** @return Vocabulary */
@@ -51,7 +57,10 @@ public class Word2VecModel {
 
 	/** @return {@link Searcher} for searching */
 	public Searcher forSearch() {
-		return new SearcherImpl(this);
+		if(normalized)
+			return SearcherImpl.withNormalizedModel(this);
+		else
+			return SearcherImpl.withModel(this);
 	}
 
 	/** @return Serializable thrift representation */
@@ -247,5 +256,24 @@ public class Word2VecModel {
 	/** @return {@link Word2VecTrainerBuilder} for training a model */
 	public static Word2VecTrainerBuilder trainer() {
 		return new Word2VecTrainerBuilder();
+	}
+
+	/** Normalizes the vectors in this model */
+	public void normalize() {
+		for(int i = 0; i < vocab.size(); ++i) {
+			double len = 0;
+			for(int j = i * layerSize; j < (i + 1) * layerSize; ++j)
+				len += vectors[j] * vectors[j];
+			len = Math.sqrt(len);
+
+			for(int j = i * layerSize; j < (i + 1) * layerSize; ++j)
+				vectors[j] /= len;
+		}
+		normalized = true;
+	}
+
+	/** Makes a deep copy of the model */
+	public Word2VecModel copy() {
+		return new Word2VecModel(vocab, layerSize, vectors.clone());
 	}
 }

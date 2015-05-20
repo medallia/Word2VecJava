@@ -13,28 +13,27 @@ import java.util.List;
 /** Implementation of {@link Searcher} */
 class SearcherImpl implements Searcher {
 	private final Word2VecModel model;
-	private final ImmutableMap<String, double[]> normalized;
+	private final ImmutableMap<String, Integer> word2vectorOffset;
 
-	SearcherImpl(Word2VecModel model) {
-		this.model = model;
-		ImmutableMap.Builder<String, double[]> result = ImmutableMap.builder();
-		for (int i = 0; i < model.vocab.size(); i++) {
-			double[] m = Arrays.copyOfRange(model.vectors, i * model.layerSize, (i + 1) * model.layerSize);
-			normalize(m);
-			result.put(model.vocab.get(i), m);
-		}
-
-		normalized = result.build();
+	public static Searcher withNormalizedModel(final Word2VecModel model) {
+		return new SearcherImpl(model);
 	}
 
-	private void normalize(double[] v) {
-		double len = 0;
-		for (double d : v)
-			len += d * d;
-		len = Math.sqrt(len);
+	public static Searcher withModel(final Word2VecModel model) {
+		final Word2VecModel normalizedModel = model.copy();
+		normalizedModel.normalize();
+		return withNormalizedModel(normalizedModel);
+	}
 
-		for (int i = 0; i < v.length; i++)
-			v[i] /= len;
+	private SearcherImpl(final Word2VecModel model) {
+		this.model = model;
+
+		ImmutableMap.Builder<String, Integer> result = ImmutableMap.builder();
+		for (int i = 0; i < model.vocab.size(); i++) {
+			result.put(model.vocab.get(i), i * model.layerSize);
+		}
+
+		word2vectorOffset = result.build();
 	}
 
 	@Override public List<Match> getMatches(String s, int maxNumMatches) throws UnknownWordException {
@@ -46,7 +45,7 @@ class SearcherImpl implements Searcher {
 	}
 
 	@Override public boolean contains(String word) {
-		return normalized.containsKey(word);
+		return word2vectorOffset.containsKey(word);
 	}
 
 	@Override public List<Match> getMatches(final double[] vec, int maxNumMatches) {
@@ -54,7 +53,7 @@ class SearcherImpl implements Searcher {
 				Iterables.transform(model.vocab, new Function<String, Match>() {
 					@Override
 					public Match apply(String other) {
-						double[] otherVec = normalized.get(other);
+						double[] otherVec = getVectorOrNull(other);
 						double d = calculateDistance(otherVec, vec);
 						return new MatchImpl(other, d);
 					}
@@ -79,9 +78,19 @@ class SearcherImpl implements Searcher {
 	 * @throws UnknownWordException If word is not in the model's vocabulary
 	 */
 	private double[] getVector(String word) throws UnknownWordException {
-		if (!normalized.containsKey(word))
+		final double[] result = getVectorOrNull(word);
+		if(result == null)
 			throw new UnknownWordException(word);
-		return normalized.get(word);
+
+		return result;
+	}
+
+	private double[] getVectorOrNull(final String word) {
+		final Integer index = word2vectorOffset.get(word);
+		if(index == null)
+			return null;
+
+		return Arrays.copyOfRange(model.vectors, index, index + model.layerSize);
 	}
 
 	/** @return Vector difference from v1 to v2 */
