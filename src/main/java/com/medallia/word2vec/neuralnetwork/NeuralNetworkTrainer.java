@@ -1,6 +1,8 @@
 package com.medallia.word2vec.neuralnetwork;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -11,12 +13,8 @@ import com.medallia.word2vec.Word2VecTrainerBuilder.TrainingProgressListener.Sta
 import com.medallia.word2vec.huffman.HuffmanCoding.HuffmanNode;
 import com.medallia.word2vec.util.CallableVoid;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Parent class for training word2vec's neural network */
@@ -51,7 +49,7 @@ public abstract class NeuralNetworkTrainer {
 	/** 
 	 * In the C version, this includes the </s> token that replaces a newline character
 	 */
-	int numTrainedTokens;
+	long numTrainedTokens;
 	
 	/* The following includes shared state that is updated per worker thread */
 	
@@ -151,28 +149,49 @@ public abstract class NeuralNetworkTrainer {
 	}
 	
 	/** @return Trained NN model */
-	public NeuralNetworkModel train(Iterable<List<String>> sentences) throws InterruptedException {
-		ListeningExecutorService ex = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(config.numThreads));
-		
+	public NeuralNetworkModel train(final Iterable<List<String>> sentences) throws InterruptedException {
+		final ListeningExecutorService ex =
+				MoreExecutors.listeningDecorator(
+					new ThreadPoolExecutor(config.numThreads, config.numThreads,
+							0L, TimeUnit.MILLISECONDS,
+							new ArrayBlockingQueue<Runnable>(8),
+							new ThreadPoolExecutor.CallerRunsPolicy()));
+
 		int numSentences = Iterables.size(sentences);
 		numTrainedTokens += numSentences;
-		
-		// Partition the sentences evenly amongst the threads
-		Iterable<List<List<String>>> partitioned = Iterables.partition(sentences, numSentences / config.numThreads + 1);
-		
+
+		// Partition the sentences into batches
+		final Iterable<List<List<String>>> batched = new Iterable<List<List<String>>>() {
+			@Override	public Iterator<List<List<String>>> iterator() {
+				return new Iterator<List<List<String>>>() {
+					private final Iterator<List<String>> inner = sentences.iterator();
+
+					@Override
+					public boolean hasNext() {
+						return inner.hasNext();
+					}
+
+					@Override
+					public List<List<String>> next() {
+						if(!hasNext())
+							throw new NoSuchElementException();
+
+						return Lists.newArrayList(Iterators.limit(inner, 1024));
+					}
+				};
+			}
+		};
+
 		try {
 			listener.update(Stage.TRAIN_NEURAL_NETWORK, 0.0);
 			for (int iter = config.iterations; iter > 0; iter--) {
-				List<CallableVoid> tasks = new ArrayList<>();
+				List<ListenableFuture<?>> futures = new ArrayList<>(64);
 				int i = 0;
-				for (final List<List<String>> batch : partitioned) {
-					tasks.add(createWorker(i, iter, batch));
+				for (final List<List<String>> batch : batched) {
+					futures.add(ex.submit(createWorker(i, iter, batch)));
 					i++;
 				}
 				
-				List<ListenableFuture<?>> futures = new ArrayList<>(tasks.size());
-				for (CallableVoid task : tasks)
-					futures.add(ex.submit(task));
 				try {
 					Futures.allAsList(futures).get();
 				} catch (ExecutionException e) {
