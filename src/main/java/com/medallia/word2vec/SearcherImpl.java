@@ -7,6 +7,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
 import com.medallia.word2vec.util.Pair;
 
+import java.nio.DoubleBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -84,9 +85,10 @@ class SearcherImpl implements Searcher {
       if(index == null)
         return null;
 
+    final DoubleBuffer vectors = model.vectors.duplicate();
     double[] result = new double[model.layerSize];
-    model.vectors.position(index);
-    model.vectors.get(result);
+    vectors.position(index);
+    vectors.get(result);
     return result;
   }
 
