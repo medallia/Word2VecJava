@@ -59,9 +59,9 @@ public class Word2VecModel {
 	/** @return Serializable thrift representation */
 	public Word2VecModelThrift toThrift() {
 		double[] vectorsArray;
-		try {
+		if(vectors.hasArray()) {
 			vectorsArray = vectors.array();
-		} catch (UnsupportedOperationException e) {
+		} else {
 			vectorsArray = new double[vectors.limit()];
 			vectors.position(0);
 			vectors.get(vectorsArray);
