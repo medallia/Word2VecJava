@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 
+/**
+ * Represents a word2vec model where all the vectors are normalized to unit length.
+ */
 public class NormalizedWord2VecModel extends Word2VecModel {
 	private NormalizedWord2VecModel(Iterable<String> vocab, int layerSize, final DoubleBuffer vectors) {
 		super(vocab, layerSize, vectors);
