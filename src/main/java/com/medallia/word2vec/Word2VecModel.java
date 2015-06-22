@@ -3,7 +3,9 @@ package com.medallia.word2vec;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -35,13 +37,17 @@ import com.medallia.word2vec.util.AC;
 public class Word2VecModel {
 	final List<String> vocab;
 	final int layerSize;
-	final double[] vectors;
+	final DoubleBuffer vectors;
 	private final static long ONE_GB = 1024 * 1024 * 1024;
 
-	Word2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
+	Word2VecModel(Iterable<String> vocab, int layerSize, DoubleBuffer vectors) {
 		this.vocab = ImmutableList.copyOf(vocab);
 		this.layerSize = layerSize;
 		this.vectors = vectors;
+	}
+
+	Word2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
+		this(vocab, layerSize, DoubleBuffer.wrap(vectors));
 	}
 
 	/** @return Vocabulary */
@@ -56,10 +62,19 @@ public class Word2VecModel {
 
 	/** @return Serializable thrift representation */
 	public Word2VecModelThrift toThrift() {
+		double[] vectorsArray;
+		if(vectors.hasArray()) {
+			vectorsArray = vectors.array();
+		} else {
+			vectorsArray = new double[vectors.limit()];
+			vectors.position(0);
+			vectors.get(vectorsArray);
+		}
+
 		return new Word2VecModelThrift()
 				.setVocab(vocab)
 				.setLayerSize(layerSize)
-				.setVectors(Doubles.asList(vectors));
+				.setVectors(Doubles.asList(vectorsArray));
 	}
 
 	/** @return {@link Word2VecModel} created from a thrift representation */
@@ -140,7 +155,7 @@ public class Word2VecModel {
 					layerSize));
 
 			List<String> vocabs = new ArrayList<String>(vocabSize);
-			double vectors[] = new double[vocabSize * layerSize];
+			DoubleBuffer vectors = ByteBuffer.allocateDirect(vocabSize * layerSize * 8).asDoubleBuffer();
 
 			long lastLogMessage = System.currentTimeMillis();
 			final float[] floats = new float[layerSize];
@@ -162,7 +177,7 @@ public class Word2VecModel {
 				final FloatBuffer floatBuffer = buffer.asFloatBuffer();
 				floatBuffer.get(floats);
 				for (int i = 0; i < floats.length; ++i) {
-					vectors[lineno * layerSize + i] = floats[i];
+					vectors.put(lineno * layerSize + i, floats[i]);
 				}
 				buffer.position(buffer.position() + 4 * layerSize);
 
