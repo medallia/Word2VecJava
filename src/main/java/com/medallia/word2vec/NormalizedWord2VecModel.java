@@ -16,7 +16,7 @@ public class NormalizedWord2VecModel extends Word2VecModel {
 		normalize();
 	}
 
-	public NormalizedWord2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
+	private NormalizedWord2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
 		super(vocab, layerSize, vectors);
 		normalize();
 	}
