@@ -178,6 +178,11 @@ public abstract class NeuralNetworkTrainer {
 
 						return Lists.newArrayList(Iterators.limit(inner, 1024));
 					}
+
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
 				};
 			}
 		};
