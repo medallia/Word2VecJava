@@ -169,7 +169,7 @@ public abstract class NeuralNetworkTrainer {
 
 		// Partition the sentences into batches
 		final Iterable<List<List<String>>> batched = new Iterable<List<List<String>>>() {
-			@Override	public Iterator<List<List<String>>> iterator() {
+			@Override public Iterator<List<List<String>>> iterator() {
 				return new Iterator<List<List<String>>>() {
 					private final Iterator<List<String>> inner = sentences.iterator();
 
