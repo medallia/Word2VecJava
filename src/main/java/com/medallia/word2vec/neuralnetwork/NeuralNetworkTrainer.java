@@ -168,31 +168,7 @@ public abstract class NeuralNetworkTrainer {
 		numTrainedTokens += numSentences;
 
 		// Partition the sentences into batches
-		final Iterable<List<List<String>>> batched = new Iterable<List<List<String>>>() {
-			@Override public Iterator<List<List<String>>> iterator() {
-				return new Iterator<List<List<String>>>() {
-					private final Iterator<List<String>> inner = sentences.iterator();
-
-					@Override
-					public boolean hasNext() {
-						return inner.hasNext();
-					}
-
-					@Override
-					public List<List<String>> next() {
-						if(!hasNext())
-							throw new NoSuchElementException();
-
-						return Lists.newArrayList(Iterators.limit(inner, 1024));
-					}
-
-					@Override
-					public void remove() {
-						throw new UnsupportedOperationException();
-					}
-				};
-			}
-		};
+		final Iterable<List<List<String>>> batched = Iterables.partition(sentences, 1024);
 
 		try {
 			listener.update(Stage.TRAIN_NEURAL_NETWORK, 0.0);
