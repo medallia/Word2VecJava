@@ -21,6 +21,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -64,9 +67,16 @@ public class Word2VecExamples {
 					}
 				})
 				.train(partitioned);
-		
+
+		// Writes model to a thrift file
 		try (ProfilingTimer timer = ProfilingTimer.create(LOG, "Writing output to file")) {
 			FileUtils.writeStringToFile(new File("text8.model"), ThriftUtils.serializeJson(model.toThrift()));
+		}
+
+		// Alternatively, you can write the model to a bin file that's compatible with the C
+		// implementation.
+		try(final OutputStream os = Files.newOutputStream(Paths.get("text8.bin"))) {
+			model.toBinFile(os);
 		}
 		
 		interact(model.forSearch());
