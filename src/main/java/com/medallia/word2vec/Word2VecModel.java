@@ -216,6 +216,9 @@ public class Word2VecModel {
 		}
 	}
 
+	/**
+	 * Saves the model as a bin file that's compatible with the C version of Word2Vec
+	 */
 	public void toBinFile(final OutputStream out) throws IOException {
 		final Charset cs = Charset.forName("UTF-8");
 		final String header = String.format("%d %d\n", vocab.size(), layerSize);
@@ -223,7 +226,7 @@ public class Word2VecModel {
 
 		final double[] vector = new double[layerSize];
 		final ByteBuffer buffer = ByteBuffer.allocate(4 * layerSize);
-		buffer.order(ByteOrder.LITTLE_ENDIAN);
+		buffer.order(ByteOrder.LITTLE_ENDIAN);	// The C version uses this byte order.
 		for(int i = 0; i < vocab.size(); ++i) {
 			out.write(String.format("%s ", vocab.get(i)).getBytes(cs));
 
