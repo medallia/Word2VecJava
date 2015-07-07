@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.medallia.word2vec.Searcher.UnknownWordException;
@@ -45,6 +46,8 @@ public class Word2VecBinTest {
     assertModelsEqual(binModel, txtModel);
   }
 
+  private Path tempFile = null;
+
   /**
    * Tests that a Word2VecModel round-trips through the bin format without changes
    */
@@ -54,18 +57,20 @@ public class Word2VecBinTest {
     final Word2VecModel model =
         Word2VecModel.fromTextFile(filename, Common.readResource(Word2VecTest.class, filename));
 
-    final Path tempFile = Files.createTempFile(
+    tempFile = Files.createTempFile(
             String.format("%s-", Word2VecBinTest.class.getSimpleName()), ".bin");
-    try {
-      try (final OutputStream os = Files.newOutputStream(tempFile)) {
-        model.toBinFile(os);
-      }
-
-      final Word2VecModel modelCopy = Word2VecModel.fromBinFile(tempFile.toFile());
-      assertModelsEqual(model, modelCopy);
-    } finally {
-      Files.delete(tempFile);
+    try (final OutputStream os = Files.newOutputStream(tempFile)) {
+      model.toBinFile(os);
     }
+
+    final Word2VecModel modelCopy = Word2VecModel.fromBinFile(tempFile.toFile());
+    assertModelsEqual(model, modelCopy);
+  }
+
+  @After
+  public void cleanupTempFile() throws IOException {
+    if(tempFile != null)
+      Files.delete(tempFile);
   }
 
   private void assertModelsEqual(
