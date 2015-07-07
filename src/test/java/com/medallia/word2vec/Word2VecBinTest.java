@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.medallia.word2vec.Searcher.UnknownWordException;
@@ -43,7 +44,7 @@ public class Word2VecBinTest {
             "/com/medallia/word2vec/tokensModel.txt");
     Word2VecModel txtModel = Word2VecModel.fromTextFile(txtFile);
 
-    assertModelsEqual(binModel, txtModel);
+    assertEquals(binModel, txtModel);
   }
 
   private Path tempFile = null;
@@ -64,7 +65,7 @@ public class Word2VecBinTest {
     }
 
     final Word2VecModel modelCopy = Word2VecModel.fromBinFile(tempFile.toFile());
-    assertModelsEqual(model, modelCopy);
+    assertEquals(model, modelCopy);
   }
 
   @After
@@ -73,7 +74,7 @@ public class Word2VecBinTest {
       Files.delete(tempFile);
   }
 
-  private void assertModelsEqual(
+  private void assertEquals(
       final Word2VecModel leftModel,
       final Word2VecModel rightModel) throws UnknownWordException {
     final Searcher leftSearcher = leftModel.forSearch();
@@ -90,18 +91,18 @@ public class Word2VecBinTest {
     for (String vocab : leftModel.getVocab()) {
       final List<Double> leftVector = leftSearcher.getRawVector(vocab);
       final List<Double> rightVector = rightSearcher.getRawVector(vocab);
-      assertVectorsEqual(leftVector, rightVector);
+      assertEquals(leftVector, rightVector);
     }
   }
 
-  private void assertVectorsEqual(
+  private void assertEquals(
       final List<Double> leftVector,
       final List<Double> rightVector) {
-    assertEquals(leftVector.size(), rightVector.size());
+    Assert.assertEquals(leftVector.size(), rightVector.size());
     for (int i = 0; i < leftVector.size(); i++) {
       double txtD = leftVector.get(i);
       double binD = rightVector.get(i);
-      assertEquals(txtD, binD, 0.0001);
+      Assert.assertEquals(txtD, binD, 0.0001);
     }
   }
 }
