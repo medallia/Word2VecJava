@@ -157,11 +157,14 @@ public abstract class NeuralNetworkTrainer {
 	
 	/** @return Trained NN model */
 	public NeuralNetworkModel train(final Iterable<List<String>> sentences) throws InterruptedException {
+		// Create an executor that runs as many threads as are defined in the config, and blocks if
+		// you're trying to run more. This is to make sure we don't read the entire corpus into
+		// memory.
 		final ListeningExecutorService ex =
 				MoreExecutors.listeningDecorator(
 					new ThreadPoolExecutor(config.numThreads, config.numThreads,
 							0L, TimeUnit.MILLISECONDS,
-							new ArrayBlockingQueue<Runnable>(8),
+							new ArrayBlockingQueue<Runnable>(config.numThreads),
 							new ThreadPoolExecutor.CallerRunsPolicy()));
 
 		int numSentences = Iterables.size(sentences);
