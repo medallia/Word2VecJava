@@ -3,12 +3,14 @@ package com.medallia.word2vec;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -212,6 +214,33 @@ public class Word2VecModel {
 
 			return new Word2VecModel(vocabs, layerSize, vectors);
 		}
+	}
+
+	/**
+	 * Saves the model as a bin file that's compatible with the C version of Word2Vec
+	 */
+	public void toBinFile(final OutputStream out) throws IOException {
+		final Charset cs = Charset.forName("UTF-8");
+		final String header = String.format("%d %d\n", vocab.size(), layerSize);
+		out.write(header.getBytes(cs));
+
+		final double[] vector = new double[layerSize];
+		final ByteBuffer buffer = ByteBuffer.allocate(4 * layerSize);
+		buffer.order(ByteOrder.LITTLE_ENDIAN);	// The C version uses this byte order.
+		for(int i = 0; i < vocab.size(); ++i) {
+			out.write(String.format("%s ", vocab.get(i)).getBytes(cs));
+
+			vectors.position(i * layerSize);
+			vectors.get(vector);
+			buffer.clear();
+			for(int j = 0; j < layerSize; ++j)
+				buffer.putFloat((float)vector[j]);
+			out.write(buffer.array());
+
+			out.write('\n');
+		}
+
+		out.flush();
 	}
 
 	/**
