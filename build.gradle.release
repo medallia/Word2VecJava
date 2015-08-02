@@ -1,4 +1,4 @@
-apply plugin: 'java'
+apply plugin: 'signing'
 
 task javadocJar(type: Jar) {
     classifier = 'javadoc'
