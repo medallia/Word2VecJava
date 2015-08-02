@@ -7,7 +7,7 @@ This is a port of the open source C implementation of word2vec (https://code.goo
 <dependency>
   <groupId>com.medallia.word2vec</groupId>
   <artifactId>Word2VecJava</artifactId>
-  <version>0.9.0</version>
+  <version>0.10.3</version>
 </dependency>
 ```
 
