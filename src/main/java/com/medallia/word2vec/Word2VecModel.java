@@ -57,6 +57,11 @@ public class Word2VecModel {
 		return vocab;
 	}
 
+    /** @return Layer size */
+    public int getLayerSize() {
+        return layerSize;
+    }
+
 	/** @return {@link Searcher} for searching */
 	public Searcher forSearch() {
 		return new SearcherImpl(this);
