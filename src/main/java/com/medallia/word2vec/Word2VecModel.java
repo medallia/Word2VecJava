@@ -39,17 +39,26 @@ import com.medallia.word2vec.util.AC;
 public class Word2VecModel {
 	final List<String> vocab;
 	final int layerSize;
-	final DoubleBuffer vectors;
+	/** The max number of vectors stored in each DoubleBuffer. */
+	final int vectorsPerBuffer;
+	final DoubleBuffer[] vectors;
 	private final static long ONE_GB = 1024 * 1024 * 1024;
+	/**
+	 * The maxiumum size we will build a double buffer, in doubles. Since we use
+	 * memory-mapped byte buffers, and these have their size specified with an
+	 * int, the most doubles we can store is Integer.MAX_VALUE / 8.
+	 */
+	private final static int MAX_DOUBLE_BUFFER = Integer.MAX_VALUE / 8;
 
-	Word2VecModel(Iterable<String> vocab, int layerSize, DoubleBuffer vectors) {
+	Word2VecModel(Iterable<String> vocab, int layerSize, DoubleBuffer[] vectors) {
 		this.vocab = ImmutableList.copyOf(vocab);
 		this.layerSize = layerSize;
 		this.vectors = vectors;
+		this.vectorsPerBuffer = vectors[0].limit() / layerSize;
 	}
 
 	Word2VecModel(Iterable<String> vocab, int layerSize, double[] vectors) {
-		this(vocab, layerSize, DoubleBuffer.wrap(vectors));
+		this(vocab, layerSize, new DoubleBuffer[] { DoubleBuffer.wrap(vectors) });
 	}
 
 	/** @return Vocabulary */
@@ -65,12 +74,21 @@ public class Word2VecModel {
 	/** @return Serializable thrift representation */
 	public Word2VecModelThrift toThrift() {
 		double[] vectorsArray;
-		if(vectors.hasArray()) {
-			vectorsArray = vectors.array();
+		if(vectors.length == 1 && vectors[0].hasArray()) {
+			vectorsArray = vectors[0].array();
 		} else {
-			vectorsArray = new double[vectors.limit()];
-			vectors.position(0);
-			vectors.get(vectorsArray);
+			int totalSize = 0;
+			for (DoubleBuffer buffer : vectors) {
+				totalSize += buffer.limit();
+			}
+			vectorsArray = new double[totalSize];
+			int copiedCount = 0;
+			for (DoubleBuffer buffer : vectors) {
+				int size = buffer.limit();
+				buffer.position(0);
+				buffer.get(vectorsArray, copiedCount, size);
+				copiedCount += size;
+			}
 		}
 
 		return new Word2VecModelThrift()
@@ -119,6 +137,16 @@ public class Word2VecModel {
 	 */
 	public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder, ProfilingTimer timer)
 			throws IOException {
+		return fromBinFile(file, byteOrder, timer, MAX_DOUBLE_BUFFER);
+	}
+
+	/**
+	 * Testable version, with injected max double buffer size.
+	 * @return {@link Word2VecModel} created from the binary representation output
+	 * by the open source C version of word2vec using the given byte order.
+	 */
+	public static Word2VecModel fromBinFile(File file, ByteOrder byteOrder, ProfilingTimer timer, int maxDoubleBufferSize)
+			throws IOException {
 
 		try (
 				final FileInputStream fis = new FileInputStream(file);
@@ -156,58 +184,72 @@ public class Word2VecModel {
 					vocabSize,
 					layerSize));
 
-			List<String> vocabs = new ArrayList<String>(vocabSize);
-			DoubleBuffer vectors = ByteBuffer.allocateDirect(vocabSize * layerSize * 8).asDoubleBuffer();
+			// Build up enough DoubleBuffers to store all of the vectors we'll be loading.
+			int vectorsPerBuffer = maxDoubleBufferSize / layerSize;
+			int numBuffers = vocabSize / vectorsPerBuffer + (vocabSize % vectorsPerBuffer != 0 ? 1 : 0);
+			DoubleBuffer[] vectors = new DoubleBuffer[numBuffers];
+			int remainingVectors = vocabSize;
+			for (int i = 0; remainingVectors > vectorsPerBuffer; i++, remainingVectors -= vectorsPerBuffer) {
+				vectors[i] = ByteBuffer.allocateDirect(vectorsPerBuffer * layerSize * 8).asDoubleBuffer();
+			}
+			if (remainingVectors > 0) {
+				vectors[numBuffers - 1] = ByteBuffer.allocateDirect(remainingVectors * layerSize * 8).asDoubleBuffer();
+			}
 
+			List<String> vocabs = new ArrayList<String>(vocabSize);
 			long lastLogMessage = System.currentTimeMillis();
 			final float[] floats = new float[layerSize];
-			for (int lineno = 0; lineno < vocabSize; lineno++) {
-				// read vocab
-				sb.setLength(0);
-				c = (char) buffer.get();
-				while (c != ' ') {
-					// ignore newlines in front of words (some binary files have newline,
-					// some don't)
-					if (c != '\n') {
-						sb.append(c);
-					}
+			int lineno = 0;
+			for (int buffno = 0; buffno < vectors.length; buffno++) {
+				DoubleBuffer vectorBuffer = vectors[buffno];
+				for (int vecno = 0; vecno < Math.min(vectorsPerBuffer, vectorBuffer.limit()/ layerSize); vecno++, lineno++) {
+					// read vocab
+					sb.setLength(0);
 					c = (char) buffer.get();
-				}
-				vocabs.add(sb.toString());
+					while (c != ' ') {
+						// ignore newlines in front of words (some binary files have newline,
+						// some don't)
+						if (c != '\n') {
+							sb.append(c);
+						}
+						c = (char) buffer.get();
+					}
+					vocabs.add(sb.toString());
 
-				// read vector
-				final FloatBuffer floatBuffer = buffer.asFloatBuffer();
-				floatBuffer.get(floats);
-				for (int i = 0; i < floats.length; ++i) {
-					vectors.put(lineno * layerSize + i, floats[i]);
-				}
-				buffer.position(buffer.position() + 4 * layerSize);
+					// read vector
+					final FloatBuffer floatBuffer = buffer.asFloatBuffer();
+					floatBuffer.get(floats);
+					for (int i = 0; i < floats.length; ++i) {
+						vectorBuffer.put(vecno * layerSize + i, floats[i]);
+					}
+					buffer.position(buffer.position() + 4 * layerSize);
 
-				// print log
-				final long now = System.currentTimeMillis();
-				if (now - lastLogMessage > 1000) {
-					final double percentage = ((double) (lineno + 1) / (double) vocabSize) * 100.0;
-					timer.appendToLog(
-							String.format("Loaded %d/%d vectors (%f%%)", lineno + 1, vocabSize, percentage));
-					lastLogMessage = now;
-				}
+					// print log
+					final long now = System.currentTimeMillis();
+					if (now - lastLogMessage > 1000) {
+						final double percentage = ((double) (lineno + 1) / (double) vocabSize) * 100.0;
+						timer.appendToLog(
+								String.format("Loaded %d/%d vectors (%f%%)", lineno + 1, vocabSize, percentage));
+						lastLogMessage = now;
+					}
 
-				// remap file
-				if (buffer.position() > ONE_GB) {
-					final int newPosition = (int) (buffer.position() - ONE_GB);
-					final long size = Math.min(channel.size() - ONE_GB * bufferCount, Integer.MAX_VALUE);
-					timer.endAndStart(
-							"Reading gigabyte #%d. Start: %d, size: %d",
-							bufferCount,
-							ONE_GB * bufferCount,
-							size);
-					buffer = channel.map(
-							FileChannel.MapMode.READ_ONLY,
-							ONE_GB * bufferCount,
-							size);
-					buffer.order(byteOrder);
-					buffer.position(newPosition);
-					bufferCount += 1;
+					// remap file
+					if (buffer.position() > ONE_GB) {
+						final int newPosition = (int) (buffer.position() - ONE_GB);
+						final long size = Math.min(channel.size() - ONE_GB * bufferCount, Integer.MAX_VALUE);
+						timer.endAndStart(
+								"Reading gigabyte #%d. Start: %d, size: %d",
+								bufferCount,
+								ONE_GB * bufferCount,
+								size);
+						buffer = channel.map(
+								FileChannel.MapMode.READ_ONLY,
+								ONE_GB * bufferCount,
+								size);
+						buffer.order(byteOrder);
+						buffer.position(newPosition);
+						bufferCount += 1;
+					}
 				}
 			}
 			timer.end();
@@ -227,11 +269,15 @@ public class Word2VecModel {
 		final double[] vector = new double[layerSize];
 		final ByteBuffer buffer = ByteBuffer.allocate(4 * layerSize);
 		buffer.order(ByteOrder.LITTLE_ENDIAN);	// The C version uses this byte order.
+
+		int vectorsPerBuffer = MAX_DOUBLE_BUFFER / layerSize;
+
 		for(int i = 0; i < vocab.size(); ++i) {
 			out.write(String.format("%s ", vocab.get(i)).getBytes(cs));
 
-			vectors.position(i * layerSize);
-			vectors.get(vector);
+			DoubleBuffer vectorBuffer = vectors[i / vectorsPerBuffer];
+			vectorBuffer.position(i * layerSize);
+			vectorBuffer.get(vector);
 			buffer.clear();
 			for(int j = 0; j < layerSize; ++j)
 				buffer.putFloat((float)vector[j]);

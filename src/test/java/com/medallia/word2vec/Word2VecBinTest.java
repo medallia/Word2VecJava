@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -16,6 +17,7 @@ import org.junit.Test;
 
 import com.medallia.word2vec.Searcher.UnknownWordException;
 import com.medallia.word2vec.util.Common;
+import com.medallia.word2vec.util.ProfilingTimer;
 
 /**
  * Tests converting the binary models into
@@ -67,6 +69,27 @@ public class Word2VecBinTest {
     final Word2VecModel modelCopy = Word2VecModel.fromBinFile(tempFile.toFile());
     assertEquals(model, modelCopy);
   }
+
+	/**
+	 * Tests that a Word2VecModel can load properly if the file doesn't fit into one buffer.
+	 */
+	@Test
+	public void testLargeFile() throws IOException, UnknownWordException {
+    File binFile = Common.getResourceAsFile(
+            this.getClass(),
+            "/com/medallia/word2vec/tokensModel.bin");
+		// The tokens model has 1186 words of 200 doubles each. Make it store 500 vectors per buffer.
+    Word2VecModel binModel =
+			Word2VecModel.fromBinFile(binFile, ByteOrder.LITTLE_ENDIAN, ProfilingTimer.NONE, 500 * 200);
+		Assert.assertEquals("binary file should have been split in 3", binModel.vectors.length, 3);
+
+    File txtFile = Common.getResourceAsFile(
+            this.getClass(),
+            "/com/medallia/word2vec/tokensModel.txt");
+    Word2VecModel txtModel = Word2VecModel.fromTextFile(txtFile);
+
+    assertEquals(binModel, txtModel);
+	}
 
   @After
   public void cleanupTempFile() throws IOException {
