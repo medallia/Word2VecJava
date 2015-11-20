@@ -18,6 +18,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Doubles;
 import com.medallia.word2vec.thrift.Word2VecModelThrift;
 import com.medallia.word2vec.util.Common;
@@ -137,13 +138,13 @@ public class Word2VecModel {
 			// every gigabyte. To calculate offsets correctly, we have to keep track how many gigabytes
 			// we've already skipped. That's what this is for.
 
-			StringBuilder sb = new StringBuilder();
-			char c = (char) buffer.get();
+			List<Byte> list = new ArrayList<Byte>();
+			byte c = buffer.get();
 			while (c != '\n') {
-				sb.append(c);
-				c = (char) buffer.get();
+				list.add(c);
+				c = buffer.get();
 			}
-			String firstLine = sb.toString();
+			String firstLine = new String(Bytes.toArray(list));
 			int index = firstLine.indexOf(' ');
 			Preconditions.checkState(index != -1,
 					"Expected a space in the first line of file '%s': '%s'",
@@ -163,17 +164,17 @@ public class Word2VecModel {
 			final float[] floats = new float[layerSize];
 			for (int lineno = 0; lineno < vocabSize; lineno++) {
 				// read vocab
-				sb.setLength(0);
-				c = (char) buffer.get();
+				list.clear();
+				c = buffer.get();
 				while (c != ' ') {
 					// ignore newlines in front of words (some binary files have newline,
 					// some don't)
 					if (c != '\n') {
-						sb.append(c);
+						list.add(c);
 					}
-					c = (char) buffer.get();
+					c = buffer.get();
 				}
-				vocabs.add(sb.toString());
+				vocabs.add(new String(Bytes.toArray(list)));
 
 				// read vector
 				final FloatBuffer floatBuffer = buffer.asFloatBuffer();
