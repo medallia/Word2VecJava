@@ -42,6 +42,8 @@ public class Word2VecModel {
 	final int layerSize;
 	final DoubleBuffer vectors;
 	private final static long ONE_GB = 1024 * 1024 * 1024;
+	private final static byte LINE_SEPARATOR = 10;
+	private final static byte COLUME_SEPARATOR = 32;
 
 	Word2VecModel(Iterable<String> vocab, int layerSize, DoubleBuffer vectors) {
 		this.vocab = ImmutableList.copyOf(vocab);
@@ -140,12 +142,12 @@ public class Word2VecModel {
 
 			List<Byte> list = new ArrayList<Byte>();
 			byte c = buffer.get();
-			while (c != '\n') {
+			while (c != LINE_SEPARATOR) {
 				list.add(c);
 				c = buffer.get();
 			}
 			String firstLine = new String(Bytes.toArray(list));
-			int index = firstLine.indexOf(' ');
+			int index = firstLine.indexOf(COLUME_SEPARATOR);
 			Preconditions.checkState(index != -1,
 					"Expected a space in the first line of file '%s': '%s'",
 					file.getAbsolutePath(), firstLine);
@@ -166,10 +168,10 @@ public class Word2VecModel {
 				// read vocab
 				list.clear();
 				c = buffer.get();
-				while (c != ' ') {
+				while (c != COLUME_SEPARATOR) {
 					// ignore newlines in front of words (some binary files have newline,
 					// some don't)
-					if (c != '\n') {
+					if (c != LINE_SEPARATOR) {
 						list.add(c);
 					}
 					c = buffer.get();
