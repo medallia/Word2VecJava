@@ -14,6 +14,8 @@ This is a port of the open source C implementation of word2vec (https://code.goo
 For more background information about word2vec and neural network training for the vector representation of words, please see the following papers.
 * http://ttic.uchicago.edu/~haotang/speech/1301.3781.pdf
 * http://papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf
+
+For comprehensive explanation of the training process (the gradiant descent formula calculation in the back propagation training), please see:
 * http://www-personal.umich.edu/~ronxin/pdf/w2vexp.pdf
 
 Note that this isn't a completely faithful rewrite, specifically: 
