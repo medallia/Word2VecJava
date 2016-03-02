@@ -165,7 +165,6 @@ public class Word2VecModel {
                     layerSize));
 
             List<String> vocabs = new ArrayList<String>(vocabSize);
-            //DoubleBuffer vectors = ByteBuffer.allocateDirect(vocabSize * layerSize * 8L).asDoubleBuffer();
             DoubleBuffer vectors = DoubleBuffer.allocate(vocabSize * layerSize);
 
             long lastLogMessage = System.currentTimeMillis();
