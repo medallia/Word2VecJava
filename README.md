@@ -58,4 +58,4 @@ to have a clean build and re-run the tests.
 
 
 ## Contact
-Andrew Ko (wko@medallia.com)
+Andrew Ko (wko27code@gmail.com)
