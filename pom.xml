@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.medallia.word2vec</groupId>
   <artifactId>medallia-word2vec</artifactId>
-  <version>0.10.2</version>
+  <version>0.10.3-SNAPSHOT</version>
   <licenses>
     <license>
       <name>MIT License</name>
