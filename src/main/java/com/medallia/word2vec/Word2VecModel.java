@@ -166,19 +166,24 @@ public class Word2VecModel {
 
 			long lastLogMessage = System.currentTimeMillis();
 			final float[] floats = new float[layerSize];
+
+			ByteBuffer bb = ByteBuffer.allocate(1000);
+			byte b;
 			for (int lineno = 0; lineno < vocabSize; lineno++) {
 				// read vocab
-				sb.setLength(0);
-				c = (char) buffer.get();
+				bb.rewind();
+				b = buffer.get();
+				c = (char)b;
 				while (c != ' ') {
 					// ignore newlines in front of words (some binary files have newline,
 					// some don't)
 					if (c != '\n') {
-						sb.append(c);
+						bb.put(b);
 					}
-					c = (char) buffer.get();
+					b = buffer.get();
+					c = (char)b;
 				}
-				vocabs.add(sb.toString());
+				vocabs.add(new String(bb.array(), 0, bb.position(), Charset.forName("utf-8")));
 
 				// read vector
 				final FloatBuffer floatBuffer = buffer.asFloatBuffer();
